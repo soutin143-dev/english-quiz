@@ -753,6 +753,15 @@
 
     // 回答チェック
     function submitAnswer() {
+      const userAnswer = getUserAnswer(); // 選択した答えを取得
+      const correctAnswer = currentQuestion.answer;
+      const isCorrect = (userAnswer === correctAnswer);
+      const questionId = currentQuestion.id; // 問題にIDがある場合
+      const timeSpent = Date.now() - questionStartTime;
+
+      // ログ送信
+      sendLog(questionId, userAnswer, isCorrect, timeSpent);
+
       const sel = document.querySelector('input[name="opt"]:checked');
       if (!sel) {
         alert('どれか選択してください');
@@ -782,6 +791,28 @@
       currentIndex++;
       loadQuestion();
     }
+      async function sendLog(questionId, answer, correct, time) {
+      const url = "https://script.google.com/macros/s/AKfycbyUHeTGa2limjsUxJ2X8bEyjPRKwu9ZAwCFBmH7XSufYOIxNBODNhbJsXY4FPG1X4pb/exec"; // 先ほどのApps Script URL
+      const data = {
+        username: "匿名",       // 希望に応じてユーザー名も
+        questionId: questionId,
+        answer: answer,
+        correct: correct,
+        time: time
+      };
+  
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        console.log("送信結果:", result);
+      } catch (err) {
+        console.error("ログ送信エラー:", err);
+      }
+    }
   </script>
 </body>
 </html>
+
