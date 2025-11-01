@@ -715,6 +715,8 @@
 
     let quizData = [];      // 選択されたカテゴリの問題リスト
     let currentIndex = 0;   // 現在の問題番号
+    let currentQuestion;
+    let questionStartTime;
 
     // カテゴリ選択（英単語／英文法）
     function chooseCategory(cat) {
@@ -737,6 +739,9 @@
 
     // 問題を画面に表示
     function loadQuestion() {
+      function loadQuestion(index) {
+      currentQuestion = quizData[currentIndex]; // questions は問題配列
+      questionStartTime = Date.now(); // 開始
       const q = quizData[currentIndex];
       document.getElementById('questionText').innerHTML = q.question;
       const ul = document.getElementById('optionsContainer');
@@ -821,6 +826,7 @@
   </script>
 </body>
 </html>
+
 
 
 
