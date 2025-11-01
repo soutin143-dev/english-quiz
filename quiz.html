@@ -782,28 +782,8 @@
       currentIndex++;
       loadQuestion();
     }
-    sync function sendLog(questionId, answer, correct, time) {
-      const url = "https://script.google.com/macros/s/AKfycbywfLyilrz-NIIOttC9cSx_dk73KsP4I78vzYv6z66gnaq-3DAeZ7QugISrZSxaZGzq/exec";
-      const data = {
-        username: "匿名",       // 希望に応じてユーザー名も
-        questionId: questionId,
-        answer: answer,
-        correct: correct,
-        time: time
-      };
-  
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        console.log("送信結果:", result);
-      } catch (err) {
-        console.error("ログ送信エラー:", err);
-      }
-    }
   </script>
 </body>
 
 </html>
+
