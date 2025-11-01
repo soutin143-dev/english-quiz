@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>英語クイズアプリ</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin:0; padding:20px; }
+    .container { max-width:800px; margin:auto; background:#fff; padding:20px;
+                 border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+    h1,h2 { text-align:center; color:#333; }
+    button {
+      display:block; width:200px; margin:10px auto; padding:10px;
+      font-size:16px; border:none; border-radius:5px; color:#fff; cursor:pointer;
+      transition: background .3s ease;
+    }
+    .category { background:#FF9800; }
+    .category:hover { background:#F57C00; }
+    .nav    { background:#4CAF50; width:150px; }
+    .nav:hover { background:#45A049; }
+    .back   { background:#9E9E9E; }
+    .back:hover { background:#757575; }
+    .hidden { display:none !important; }
+    .question { margin:20px 0; font-size:18px; line-height:1.5; }
+    ul.options { list-style:none; padding:0; }
+    ul.options li { margin:8px 0; }
+    .nav-group { display:flex; justify-content:center; gap:10px; margin-top:20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ① カテゴリ選択画面 -->
+    <div id="screenCategory">
+      <h1>英語クイズ</h1>
+      <h2>カテゴリーを選んでください</h2>
+      <button class="category" onclick="chooseCategory('英単語')">英単語クイズ</button>
+      <button class="category" onclick="chooseCategory('英文法')">英文法クイズ</button>
+    </div>
+
+    <!-- ② クイズ画面 -->
+    <div id="screenQuiz" class="hidden">
+      <h1 id="quizTitle">クイズ</h1>
+      <div id="questionText" class="question"></div>
+      <ul id="optionsContainer" class="options"></ul>
+
+      <div class="nav-group">
+        <button id="btnPrev" class="nav" onclick="prevQuestion()">前の問題</button>
+        <button id="btnSubmit" class="nav" onclick="submitAnswer()">回答する</button>
+        <button id="btnNext" class="nav" onclick="nextQuestion()">次の問題</button>
+      </div>
+      <button class="nav back" onclick="backToCategory()">戻る</button>
+    </div>
+
+  </div>
+
+  <script>
+    // --- 配列をシャッフルする関数（Fisher–Yates） ---
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    // 問題データマップ
+    const dataMap = {
+      '英単語': [
+        {
+          question: '“weather”の意味は？',
+          options: ['① (特定の場所の一時的な)天気、天候','② 光線、放射線','③ 温度、気温、体温','④ に出席する'],
+          answer: '①',
+          explanation: '“weather”は「(特定の場所の一時的な)天気、天候」という意味です。'
+        },
+        {
+          question: '“temperature”の意味は？',
+          options: ['①. と結婚する、を結婚させる','②. に入る、に入学する','③. 温度、気温、体温','④. に従う、に服従する'],
+          answer: '③',
+          explanation: '“temperature”は「温度、気温、体温」という意味です。'
+        },
+        {
+          question: '“wind”の意味は？',
+          options: ['①. に答える','②. 穏やかな','③. 果実、実、成果','④. 風、(時計、糸など)を巻く、(道などが)曲がりくねる'],
+          answer: '④',
+          explanation: '“wind”は「風、(時計、糸など)を巻く、(道などが)曲がりくねる」という意味です。'
+        },
+        {
+          question: '“ray”の意味は？',
+          options: ['①. 植物、工場','②. に似ている','③. について議論する、を論じる','④. 光線、放射線'],
+          answer: '④',
+          explanation: '“ray”は「光線、放射線」という意味です。'
+        },
+        {
+          question: '“view”の意味は？',
+          options: ['①. 視力、目の検査、見る力','②. 観客、見物人、見ている人','③. 眺め、視界、見解、意見','④. 見る、見つめる、注目する'],
+          answer: '③',
+          explanation: '“view”は「眺め、視界、見解、意見」という意味です。'
+        },
+        {
+          question: '“fine”の意味は？',
+          options: ['①. 細い、弱い、やさしい','②. 晴れた、立派な、(きめが)細かい　　罰金　　に罰金を科す','③. 美しい、優雅な、静かな','④. 風の強い、寒い、乾燥した'],
+          answer: '②',
+          explanation: '“fine”は「晴れた、立派な、(きめが)細かい　　罰金　　に罰金を科す」という意味です。'
+        },
+        {
+          question: '“calm”の意味は？',
+          options: ['①. 涼しい、冷たい、冷静な','②. 優しい、親切な、丁寧な','③. 遅い、静かな、眠い','④. 穏やかな、落ち着いた、静かな、を落ち着かせる、を静める、静まる'],
+          answer: '④',
+          explanation: '“calm”は「穏やかな、落ち着いた、静かな、を落ち着かせる、を静める、静まる」という意味です。'
+        },
+        {
+          question: '“answer”の意味は？',
+          options: ['①. 質問する、尋ねる、確認する','②. 話す、説明する、伝える','③. に答える、に応答する　　答え、解決策、返事','④. 解決する、直す、修理する'],
+          answer: '③',
+          explanation: '“answer”は「に答える、に応答する、答え、解決策、返事」という意味です。'
+        },
+        {
+          question: '“approach”の意味は？',
+          options: ['①. 到着する、通り過ぎる、通過する','②. 見つける、探す、調べる','③. 連絡する、話しかける、紹介する','④. に近づく、に取り組む　　(研究などの)方法、接近'],
+          answer: '④',
+          explanation: '“approach”は「に近づく、に取り組む、(研究などの)方法、接近」という意味です。'
+        },
+        {
+          question: '“attend”の意味は？',
+          options: ['①. 手伝う、助ける、応援する','②. 参加する、申し込む、登録する','③. 見学する、訪れる、観察する','④. に出席する、《attend to ... で》･･･に注意を払う'],
+          answer: '④',
+          explanation: '“attend”は「に出席する、《attend to ... で》･･･に注意を払う」という意味です。'
+        },
+        {
+          question: '“discuss”の意味は？',
+          options: ['①. 調査する、分析する、記録する','②. 話す、説明する、伝える','③. について議論する、を論じる','④. 批判する、否定する、反論する'],
+          answer: '③',
+          explanation: '“discuss”は「について議論する、を論じる」という意味です。'
+        },
+        {
+          question: '“enter”の意味は？',
+          options: ['①. に入る、に入学する','②. 光線、放射線','③. 謝罪する、わびる','④. 大陸'],
+          answer: '①',
+          explanation: '“enter”は「に入る、に入学する」という意味です。'
+        },
+        {
+          question: '“plant”の意味は？',
+          options: ['①. 果物、実、成果','②. に従う、に服従する','③. 植物、工場、を植える、(考えなど)を植えつける','④. に似ている'],
+          answer: '③',
+          explanation: '“plant”は「植物、工場、を植える、(考えなど)を植えつける」という意味です。'
+        },
+        {
+          question: '“blossom”の意味は？',
+          options: ['①. 葉、(本などの紙の)1枚','②. (果樹の)花、開花(期)、(花が)開く、栄える','③. 植物、工場、','④. を植える'],
+          answer: '②',
+          explanation: '“blossom”は「(果樹の)花、開花(期)、(花が)開く、栄える」という意味です。'
+        },
+        {
+          question: '“bloom”の意味は？',
+          options: ['①. 成長する、大きくなる、を育てる、〜になる','②. ','③. ','④. (観賞用の)花、開花(期)、花盛り、(花が)開く、栄える'],
+          answer: '④',
+          explanation: '“bloom”は「(観賞用の)花、開花(期)、花盛り、(花が)開く、栄える」という意味です。'
+        },
+        {
+          question: '“leaf”の意味は？',
+          options: ['①. ','②. ','③. 葉、(本などの紙の)1枚','④. '],
+          answer: '③',
+          explanation: '“leaf”は「葉、(本などの紙の)1枚」という意味です。'
+        },
+        {
+          question: '“fruit”の意味は？',
+          options: ['①. ','②. 果物、実、成果','③. ','④. '],
+          answer: '②',
+          explanation: '“fruit”は「果物、実、成果」という意味です。'
+        },
+        {
+          question: '“pick”の意味は？',
+          options: ['①. (花・実など)を摘む、を拾う','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“pick”は「(花・実など)を摘む、を拾う」という意味です。'
+        },
+        {
+          question: '“grow”の意味は？',
+          options: ['①. ','②. ','③. ','④. 成長する、大きくなる、を育てる、〜になる'],
+          answer: '④',
+          explanation: '“grow”は「成長する、大きくなる、を育てる、〜になる」という意味です。'
+        },
+        {
+          question: '“marry”の意味は？',
+          options: ['①. ','②. ','③. ','④. と結婚する、を結婚させる'],
+          answer: '④',
+          explanation: '“marry”は「と結婚する、を結婚させる」という意味です。'
+        },
+        {
+          question: '“mention”の意味は？',
+          options: ['①. ','②. 《mention that ... で》…と述べる、に言及する','③. ','④. '],
+          answer: '②',
+          explanation: '“mention”は「《mention that ... で》…と述べる、に言及する」という意味です。'
+        },
+        {
+          question: '“obey”の意味は？',
+          options: ['①. ','②. ','③. に従う、に服従する','④. '],
+          answer: '③',
+          explanation: '“obey”は「に従う、に服従する」という意味です。'
+        },
+        {
+          question: '“reach”の意味は？',
+          options: ['①. に達する、に手が届く、に着く、(手の)届く範囲','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“reach”は「に達する、に手が届く、に着く、(手の)届く範囲」という意味です。'
+        },
+        {
+          question: '“resemble”の意味は？',
+          options: ['①. ','②. に似ている','③. ','④. '],
+          answer: '②',
+          explanation: '“resemble”は「に似ている」という意味です。'
+        },
+        {
+          question: '“survive”の意味は？',
+          options: ['①. ','②. ','③. ','④. を生き延びる、生き残る、をうまく切り抜ける、うまくやっていく'],
+          answer: '④',
+          explanation: '“survive”は「を生き延びる、生き残る、をうまく切り抜ける、うまくやっていく」という意味です。'
+        },
+        {
+          question: '“contient”の意味は？',
+          options: ['①. ','②. ','③. 大陸','④. '],
+          answer: '③',
+          explanation: '“contient”は「大陸」という意味です。'
+        },
+        {
+          question: '“area”の意味は？',
+          options: ['①. (ある特定の)地域、区域、(活動の)範囲','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“area”は「(ある特定の)地域、区域、(活動の)範囲」という意味です。'
+        },
+        {
+          question: '“part”の意味は？',
+          options: ['①. 部分、部品、(国や都市の)地域、役(割)、を分ける、別れる、離れる','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“part”は「部分、部品、(国や都市の)地域、役(割)、を分ける、別れる、離れる」という意味です。'
+        },
+        {
+          question: '“horizon”の意味は？',
+          options: ['①. ','②. 地平線、水平線','③. ','④. '],
+          answer: '②',
+          explanation: '“horizon”は「地平線、水平線」という意味です。'
+        },
+        {
+          question: '“border”の意味は？',
+          options: ['①. ','②. ','③. ','④. 国境、境界、へり、境目'],
+          answer: '④',
+          explanation: '“border”は「国境、境界、へり、境目」という意味です。'
+        },
+        {
+          question: '“foreign”の意味は？',
+          options: ['①. ','②. ','③. 外国の、異質な','④. '],
+          answer: '③',
+          explanation: '“foreign”は「外国の、異質な」という意味です。'
+        },
+        {
+          question: '“apologize”の意味は？',
+          options: ['①. 謝罪する、わびる','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“apologize”は「謝罪する、わびる」という意味です。'
+        },
+        {
+          question: '“argue”の意味は？',
+          options: ['①. ','②. ','③. 言い争う、議論する','④. '],
+          answer: '③',
+          explanation: '“argue”は「言い争う、議論する」という意味です。'
+        },
+        {
+          question: '“complain”の意味は？',
+          options: ['①. ','②. 不平を言う、苦情を言う','③. ','④. '],
+          answer: '②',
+          explanation: '“complain”は「不平を言う、苦情を言う」という意味です。'
+        },
+        {
+          question: '“graduate”の意味は？',
+          options: ['①. ','②. ','③. ','④. 卒業する'],
+          answer: '④',
+          explanation: '“apologize”は「卒業する」という意味です。'
+        },
+        {
+          question: '“agree”の意味は？',
+          options: ['①. 意見が一致する、同意する、賛成する','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“agree”は「意見が一致する、同意する、賛成する」という意味です。'
+        },
+        {
+          question: '“creature”の意味は？',
+          options: ['①. ','②. ','③. 生き物、動物','④. '],
+          answer: '③',
+          explanation: '“creature”は「生き物、動物」という意味です。'
+        },
+        {
+          question: '“tail”の意味は？',
+          options: ['①. ','②. ','③. ','④. 尾、しっぽ'],
+          answer: '④',
+          explanation: '“tail”は「尾、しっぽ」という意味です。'
+        },
+        {
+          question: '“alive”の意味は？',
+          options: ['①. ','②. 生きている、生き生きして','③. ','④. '],
+          answer: '②',
+          explanation: '“alive”は「生きている、生き生きして」という意味です。'
+        },
+        {
+          question: '“bite”の意味は？',
+          options: ['①. ','②. ','③. をかむ、かみつく、かむこと、1口分','④. '],
+          answer: '③',
+          explanation: '“bite”は「をかむ、かみつく、かむこと、1口分」という意味です。'
+        },
+        {
+          question: '“dig”の意味は？',
+          options: ['①. ','②. ','③. ','④. (地面・穴など)を掘る、(埋まっているもの)を掘り出す'],
+          answer: '④',
+          explanation: '“dig”は「(地面・穴など)を掘る、(埋まっているもの)を掘り出す」という意味です。'
+        },
+        {
+          question: '“feel”の意味は？',
+          options: ['①. 〜の感じがする、を感じる、と感じる、にさわってみる','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“feel”は「〜の感じがする、を感じる、と感じる、にさわってみる」という意味です。'
+        },
+        {
+          question: '“smell”の意味は？',
+          options: ['①. ','②. 〜のにおいがする、(におい)をかぐ、匂い、嗅覚','③. ','④. '],
+          answer: '②',
+          explanation: '“smell”は「〜のにおいがする、(におい)をかぐ、匂い、嗅覚」という意味です。'
+        },
+        {
+          question: '“taste”の意味は？',
+          options: ['①. ','②. ','③. ','④. 〜の味がする、を味見する、味、好み、嗜好'],
+          answer: '④',
+          explanation: '“taste”は「〜の味がする、を味見する、味、好み、嗜好」という意味です。'
+        },
+        {
+          question: '“seem”の意味は？',
+          options: ['①. 〜のように思われる、〜のように見える、〜であるらしい','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“look”は「〜のように思われる、〜のように見える、〜であるらしい」という意味です。'
+        },
+        {
+          question: '“look”の意味は？',
+          options: ['①. ','②. 〜のように見える、《look at ... で》…を見る、見ること、外観、《(複)で》容姿、表情','③. ','④. '],
+          answer: '②',
+          explanation: '“look”は「〜のように見える、《look at ... で》…を見る、見ること、外観、《(複)で》容姿、表情」という意味です。'
+        },
+        {
+          question: '“appear”の意味は？',
+          options: ['①. ','②. ','③. 〜のように見える、現れる、登場する','④. '],
+          answer: '③',
+          explanation: '“appear”は「〜のように見える、現れる、登場する」という意味です。'
+        },
+        {
+          question: '“relationship”の意味は？',
+          options: ['①. ','②. ','③. 関係、関連','④. '],
+          answer: '③',
+          explanation: '“relationship”は「関係、関連」という意味です。'
+        },
+        {
+          question: '“population”の意味は？',
+          options: ['①. ','②. 人口、住民数、(全)住民','③. ','④. '],
+          answer: '②',
+          explanation: '“population”は「人口、住民数、(全)住民」という意味です。'
+        },
+        {
+          question: '“generation”の意味は？',
+          options: ['①. ','②. ','③. ','④. 世代、同世代の人々、一世代、発電'],
+          answer: '④',
+          explanation: '“generation”は「世代、同世代の人々、一世代、発電」という意味です。'
+        },
+        {
+          question: '“hero”の意味は？',
+          options: ['①. 英雄、(男性)主人公','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“hero”は「英雄、(男性)主人公」という意味です。'
+        },
+        {
+          question: '“trust”の意味は？',
+          options: ['①. ','②. ','③. ','④. を信頼する、を信用する、信頼、信用'],
+          answer: '④',
+          explanation: '“trust”は「を信頼する、を信用する、信頼、信用」という意味です。'
+        },
+        {
+          question: '“village”の意味は？',
+          options: ['①. ','②. ','③. 村','④. '],
+          answer: '③',
+          explanation: '“village”は「村」という意味です。'
+        },
+        {
+          question: '“common”の意味は？',
+          options: ['①. 共通の、共同の、よくある、ありふれた','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“common”は「共通の、共同の、よくある、ありふれた」という意味です。'
+        },
+        {
+          question: '“public”の意味は？',
+          options: ['①. ','②. 公共の、公衆の、《the public で》一般の人々、公衆','③. ','④. '],
+          answer: '②',
+          explanation: '“public”は「公共の、公衆の、《the public で》一般の人々、公衆」という意味です。'
+        },
+        {
+          question: '“give”の意味は？',
+          options: ['①. ','②. ','③. を与える、を渡す','④. '],
+          answer: '③',
+          explanation: '“give”は「を与える、を渡す」という意味です。'
+        },
+        {
+          question: '“send”の意味は？',
+          options: ['①. を送る','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“send”は「を送る」という意味です。'
+        },
+        {
+          question: '“show”の意味は？',
+          options: ['①. ','②. を見せる、を示す、を教える、姿を現す、ショー、展示会','③. ','④. '],
+          answer: '②',
+          explanation: '“show”は「を見せる、を示す、を教える、姿を現す、ショー、展示会」という意味です。'
+        },
+        {
+          question: '“pass”の意味は？',
+          options: ['①. ','②. ','③. ','④. を手渡す、(を)通り過ぎる、に合格する、通行(許可)証'],
+          answer: '④',
+          explanation: '“pass”は「を手渡す、(を)通り過ぎる、に合格する、通行(許可)証」という意味です。'
+        },
+        {
+          question: '“society”の意味は？',
+          options: ['①. ','②. ','③. ','④. 社会、交際、協会'],
+          answer: '④',
+          explanation: '“society”は「社会、交際、協会」という意味です。'
+        },
+        {
+          question: '“culture”の意味は？',
+          options: ['①. ','②. ','③. 文化、教養','④. '],
+          answer: '③',
+          explanation: '“culture”は「文化、教養」という意味です。'
+        },
+        {
+          question: '“custom”の意味は？',
+          options: ['①. (社会的な)慣習、(個人の)習慣、《(複)で》関税','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“custom”は「(社会的な)慣習、(個人の)習慣、《(複)で》関税」という意味です。'
+        },
+        {
+          question: '“tradition”の意味は？',
+          options: ['①. ','②. 伝統、慣習','③. ','④. '],
+          answer: '②',
+          explanation: '“tradition”は「伝統、慣習」という意味です。'
+        },
+        {
+          question: '“rule”の意味は？',
+          options: ['①. ','②. ','③. 規則、原則、支配、を支配する','④. '],
+          answer: '③',
+          explanation: '“rule”は「規則、原則、支配、を支配する」という意味です。'
+        },
+        {
+          question: '“role”の意味は？',
+          options: ['①. 役割、役目','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“role”は「役割、役目」という意味です。'
+        },
+        {
+          question: '“address”の意味は？',
+          options: ['①. ','②. 住所、演説、(郵便物)にあて先を書く、に演説する、に取り組む','③. ','④. '],
+          answer: '②',
+          explanation: '“address”は「住所、演説、(郵便物)にあて先を書く、に演説する、に取り組む」という意味です。'
+        },
+        {
+          question: '“ceremony”の意味は？',
+          options: ['①. ','②. ','③. 式、儀式','④. '],
+          answer: '③',
+          explanation: '“ceremony”は「式、儀式」という意味です。'
+        },
+        {
+          question: '“cash”の意味は？',
+          options: ['①. ','②. ','③. ','④. 現金'],
+          answer: '④',
+          explanation: '“cash”は「現金」という意味です。'
+        },
+        {
+          question: '“buy”の意味は？',
+          options: ['①. ','②. ','③. ','④. を買う'],
+          answer: '④',
+          explanation: '“buy”は「を買う」という意味です。'
+        },
+        {
+          question: '“cook”の意味は？',
+          options: ['①. ','②. ','③. (を)料理する、(を)作る、料理を作る人、料理人','④. '],
+          answer: '③',
+          explanation: '“cook”は「(を)料理する、(を)作る、料理を作る人、料理人」という意味です。'
+        },
+        {
+          question: '“choose”の意味は？',
+          options: ['①. ','②. を選ぶ','③. ','④. '],
+          answer: '②',
+          explanation: '“choose”は「を選ぶ」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. を得る、を買う、にする、になる、着く','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“get”は「を得る、を買う、にする、になる、着く」という意味です。'
+        },
+        {
+          question: '“proud”の意味は？',
+          options: ['①. ','②. ','③. 誇りに思って','④. '],
+          answer: '③',
+          explanation: '“proud”は「誇りに思って」という意味です。'
+        },
+        {
+          question: '“grateful”の意味は？',
+          options: ['①. 感謝して','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“grateful”は「感謝して」という意味です。'
+        },
+        {
+          question: '“afraid”の意味は？',
+          options: ['①. ','②. 恐れて、心配','③. ','④. '],
+          answer: '②',
+          explanation: '“afraid”は「恐れて、心配」という意味です。'
+        },
+        {
+          question: '“anxious”の意味は？',
+          options: ['①. ','②. ','③. ','④. 心配して、切望して、心配、切望'],
+          answer: '④',
+          explanation: '“anxious”は「心配して、切望して、心配、切望」という意味です。'
+        },{
+          question: '“ashamed”の意味は？',
+          options: ['①. ','②. ','③. ','④. 恥じて'],
+          answer: '④',
+          explanation: '“ashamed”は「恥じて」という意味です。'
+        },
+        {
+          question: '“angry”の意味は？',
+          options: ['①. ','②. 怒って','③. ','④. '],
+          answer: '②',
+          explanation: '“angry”は「怒って」という意味です。'
+        },
+        {
+          question: '“miserable”の意味は？',
+          options: ['①. みじめな、不幸な','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“miserable”は「みじめな、不幸な」という意味です。'
+        },
+        {
+          question: '“ask”の意味は？',
+          options: ['①. ','②. ','③. を尋ねる、を頼む、(を)求める','④. '],
+          answer: '③',
+          explanation: '“ask”は「を尋ねる、を頼む、(を)求める」という意味です。'
+        },
+        {
+          question: '“cost”の意味は？',
+          options: ['①. (費用)がかかる、(犠牲など)を払わせる、費用、経費、犠牲','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“cost”は「(費用)がかかる、(犠牲など)を払わせる、費用、経費、犠牲」という意味です。'
+        },
+        {
+          question: '“save”の意味は？',
+          options: ['①. ','②. ','③. ','④. を省く、を節約する、を救う、を蓄える'],
+          answer: '④',
+          explanation: '“save”は「を省く、を節約する、を救う、を蓄える」という意味です。'
+        },
+        {
+          question: '“envy”の意味は？',
+          options: ['①. ','②. をうらやむ、をねたむ、ねたみ','③. ','④. '],
+          answer: '②',
+          explanation: '“envy”は「をうらやむ、をねたむ、ねたみ」という意味です。'
+        },
+        {
+          question: '“spare”の意味は？',
+          options: ['①. ','②. ','③. (時間)をさく、をなしですます、余分の、予備の','④. '],
+          answer: '③',
+          explanation: '“spare”は「(時間)をさく、をなしですます、余分の、予備の」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '④',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '③',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '④',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '③',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '④',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '③',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '③',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '①',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '③',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '④',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '④',
+          explanation: '“get”は「」という意味です。'
+        },
+        {
+          question: '“get”の意味は？',
+          options: ['①. ','②. ','③. ','④. '],
+          answer: '②',
+          explanation: '“get”は「」という意味です。'
+        },
+       
+      ],
+      '英文法': [
+        {
+          question: '【Q1】“I enjoyed an interesting ______ with Mike lat night.” に入る語は？',
+          options: ['A. converse','B. conversed','C. conversation','D. '],
+          answer: 'C',
+          explanation: '過去形なので “went” が正解です。'
+        },
+        {
+          question: '【Q2】“He has lived here ____ 2010.” に入る前置詞は？',
+          options: ['A. since','B. for','C. from','D. to'],
+          answer: 'A',
+          explanation: '「～以来」は since を使います。'
+        },
+        {
+          question: '【Q3】“She ____ already finished her work.” の空欄に入る適切な語は？',
+          options: ['A. have','B. has','C. had','D. having'],
+          answer: 'B',
+          explanation: '三人称単数現在完了形なので has が正解です。'
+        }
+      ]
+    };
+
+    let quizData = [];      // 選択されたカテゴリの問題リスト
+    let currentIndex = 0;   // 現在の問題番号
+
+    // カテゴリ選択（英単語／英文法）
+    function chooseCategory(cat) {
+      // 元データをコピーしてシャッフル
+      quizData = dataMap[cat].slice();
+      shuffleArray(quizData);
+      currentIndex = 0;
+      // 画面切替
+      document.getElementById('screenCategory').classList.add('hidden');
+      document.getElementById('screenQuiz').classList.remove('hidden');
+      document.getElementById('quizTitle').innerText = cat + ' クイズ';
+      loadQuestion();
+    }
+
+    // カテゴリ選択画面に戻る
+    function backToCategory() {
+      document.getElementById('screenQuiz').classList.add('hidden');
+      document.getElementById('screenCategory').classList.remove('hidden');
+    }
+
+    // 問題を画面に表示
+    function loadQuestion() {
+      const q = quizData[currentIndex];
+      document.getElementById('questionText').innerHTML = q.question;
+      const ul = document.getElementById('optionsContainer');
+      ul.innerHTML = '';
+      q.options.forEach(o => {
+        const li = document.createElement('li');
+        li.innerHTML = `<label>
+                          <input type="radio" name="opt" value="${o.charAt(0)}">
+                          ${o}
+                        </label>`;
+        ul.appendChild(li);
+      });
+    }
+
+    // 回答チェック
+    function submitAnswer() {
+      const sel = document.querySelector('input[name="opt"]:checked');
+      if (!sel) {
+        alert('どれか選択してください');
+        return;
+      }
+      const correct = quizData[currentIndex].answer;
+      const msg = sel.value === correct
+        ? '✅ 正解！\n\n' + quizData[currentIndex].explanation
+        : '❌ 不正解…\n\n' + quizData[currentIndex].explanation;
+      alert(msg);
+    }
+
+    // 前へ／次へ移動
+    function prevQuestion() {
+      if (currentIndex === 0) {
+        alert('最初の問題です');
+        return;
+      }
+      currentIndex--;
+      loadQuestion();
+    }
+    function nextQuestion() {
+      if (currentIndex === quizData.length - 1) {
+        alert('最後の問題です');
+        return;
+      }
+      currentIndex++;
+      loadQuestion();
+    }
+  </script>
+</body>
+</html>
