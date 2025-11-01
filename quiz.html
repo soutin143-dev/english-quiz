@@ -750,6 +750,11 @@
         ul.appendChild(li);
       });
     }
+    function getUserAnswer() {
+      // 例: ラジオボタンで answer という名前の場合
+      const selected = document.querySelector('input[name="answer"]:checked');
+      return selected ? selected.value : null;
+    }
 
     // 回答チェック
     function submitAnswer() {
@@ -816,5 +821,6 @@
   </script>
 </body>
 </html>
+
 
 
