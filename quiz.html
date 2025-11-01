@@ -761,6 +761,7 @@
 
       // ログ送信
       sendLog(questionId, userAnswer, isCorrect, timeSpent);
+      nextQuestion();
 
       const sel = document.querySelector('input[name="opt"]:checked');
       if (!sel) {
@@ -815,4 +816,5 @@
   </script>
 </body>
 </html>
+
 
